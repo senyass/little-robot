@@ -1,5 +1,5 @@
 # Little Robot⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-__ ⫯__
+__ ⫯__  
 [▣🝙▣]　　
 
 ### What is Little Robot?
