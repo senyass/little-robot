@@ -40,11 +40,11 @@ void checkRectangleWallCollision(const std::vector<Rectangle> &walls, Vector2 se
 
 }
 
-void checkWindowCollision(Vector2 sensorStart, Vector2 sensorEnd, float &closestDistance, Vector2 &closestCollisionPoint, int width, int height){
-    Vector2 windowTopLeft = {0, 0};
-    Vector2 windowTopRight = {width, 0};
-    Vector2 windowBottomLeft = {0, height};
-    Vector2 windowBottomRight = {width, height};
+void checkWindowCollision(Vector2 sensorStart, Vector2 sensorEnd, float &closestDistance, Vector2 &closestCollisionPoint, int width, int height, float robotRadius){
+    Vector2 windowTopLeft = {robotRadius, robotRadius};
+    Vector2 windowTopRight = {width - robotRadius, robotRadius};
+    Vector2 windowBottomLeft = {robotRadius, height - robotRadius};
+    Vector2 windowBottomRight = {width - robotRadius, height - robotRadius};
 
     // Check top edge
     checkSensorCollision(sensorStart, sensorEnd, windowTopLeft, windowTopRight, closestDistance, closestCollisionPoint);
@@ -63,12 +63,14 @@ int main() {
     Color pink = {255, 204, 240, 255};
     Color darkPink = {255, 102, 178, 255};
     Vector2 robotPosition = {400, 400};
+    Vector2 oldRobotPosition = robotPosition;
+    float robotRadius = 20.0f;
     float robotSpeed = 300.0f;
     float robotAngleRadians = 0.0f;
     float sensorRange = 250.0f;
     int screenWidth = 800;
     int screenHeight = 800;
-    std::vector<int> sensorAngleOffsets = {-60, -30, 0, 30, 60};
+    std::vector<int> sensorAngleOffsets = {-90, -60, -30, 0, 30, 60, 90};
 
     std::vector<Rectangle> walls = {
         {50, 50, 100, 500},
@@ -76,45 +78,26 @@ int main() {
         {300, 710, 300, 80}
     };
 
+    float avoidanceDistance = 150.0f;
+    float maxTurnSpeed = 360.0f;
+    bool recovering = false;
+    int recoveryDirection = 0;
+
+
     InitWindow(screenWidth, screenHeight, "Little Robot");
     SetTargetFPS(180);
 
    
     // Game Loop
     while (!WindowShouldClose()) {
+        oldRobotPosition = robotPosition;
         Vector2 robotDirection = {0, 0};
-        // 1. Event Handling + 2. Update State
-        if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D) ) {
-            robotDirection.x += 1;
-        } 
-        if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A)) {
-            robotDirection.x -= 1;
-        } 
-        if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S)) {
-            robotDirection.y += 1;
-        } 
-        if (IsKeyDown(KEY_UP) || IsKeyDown(KEY_W))
-            robotDirection.y -= 1;
-
-
-        // Calculate robot/sensor geometry
-        if (robotDirection.x != 0 || robotDirection.y != 0)
-        {   
-            // normalizing the direction vector to keep a constant speed 
-            robotDirection = Vector2Normalize(robotDirection);
-
-            // calculating the angle from the direction
-            robotAngleRadians = atan2f(robotDirection.y, robotDirection.x);
-        }
-
-
         float deltaTime = GetFrameTime();
-        robotPosition.x += robotDirection.x * robotSpeed * deltaTime;
-        robotPosition.y += robotDirection.y * robotSpeed * deltaTime;
 
-        // Nose position logic
-        Vector2 nosePosition = {findEndpoint(robotPosition.x, cosf(robotAngleRadians), 25), findEndpoint(robotPosition.y, sinf(robotAngleRadians), 25)};
-        
+        // 1. Event Handling + 2. Update State
+    
+
+        // Calculate robot/sensor geometry      
         // Sensor direction and endpoint logic
         std::vector<float> sensorDistances;
         std::vector<Vector2> sensorHitPoints;
@@ -125,27 +108,105 @@ int main() {
             float closestDistance = sensorRange;
             Vector2 closestCollisionPoint = sensorEnd;
             
-
             // Sensor collison with walls
             checkRectangleWallCollision(walls, robotPosition, sensorEnd, closestDistance, closestCollisionPoint);
 
-
             // Sensor collison with window edges
-            checkWindowCollision(robotPosition, sensorEnd, closestDistance, closestCollisionPoint, screenWidth, screenHeight);
+            checkWindowCollision(robotPosition, sensorEnd, closestDistance, closestCollisionPoint, screenWidth, screenHeight, robotRadius);
 
             sensorDistances.push_back(closestDistance);
             sensorHitPoints.push_back(closestCollisionPoint);
-
-
         }
-    
+        
+        // Swerving logic
+        float closestSensorDistance = sensorRange;
+        int dangerSensor = 3;
+        for (int i = 2; i < 5; i++) {
+            if (sensorDistances[i] < closestSensorDistance) {
+                closestSensorDistance = sensorDistances[i];
+                dangerSensor = i;
+            }
+        }
+        
+        float leftAverage = (sensorDistances[0] + sensorDistances[1] + sensorDistances[2]) / 3.0f;
+        float rightAverage = (sensorDistances[4] + sensorDistances[5] + sensorDistances[6]) / 3.0f;
+
+        if (closestSensorDistance <= avoidanceDistance && recovering == false) {
+            float steeringStrength = (avoidanceDistance - closestSensorDistance) / avoidanceDistance;
+            float actualTurnSpeed = steeringStrength * maxTurnSpeed;
+            
+            if (dangerSensor < 3){
+                robotAngleRadians += actualTurnSpeed * deltaTime * DEG2RAD;
+            } else if (dangerSensor > 3) {
+                robotAngleRadians -= actualTurnSpeed * deltaTime * DEG2RAD;
+            } else {
+                if (leftAverage <= rightAverage){
+                    robotAngleRadians += actualTurnSpeed * deltaTime * DEG2RAD;
+                } else {
+                    robotAngleRadians -= actualTurnSpeed * deltaTime * DEG2RAD;
+                }
+            }
+
+            
+
+           
+        }
+        robotDirection.x = cosf(robotAngleRadians);
+        robotDirection.y = sinf(robotAngleRadians);
+
+        robotPosition.x += robotDirection.x * robotSpeed * deltaTime;
+        robotPosition.y += robotDirection.y * robotSpeed * deltaTime;
+
+        // Avoid falling off the map
+        robotPosition.x = Clamp(robotPosition.x, robotRadius, screenWidth - robotRadius);
+        robotPosition.y = Clamp(robotPosition.y, robotRadius, screenHeight - robotRadius);
+
+        // Avoid colliding with walls
+        bool collidedThisFrame = false;
+        for (int i = 0; i < walls.size(); i++){
+            bool collision = CheckCollisionCircleRec(robotPosition, robotRadius, walls[i]);
+            if (collision == true) {
+               
+                collidedThisFrame = true;
+                robotPosition = oldRobotPosition;
+
+                if  (recovering == false) {
+                    if (leftAverage <= rightAverage){
+                        robotAngleRadians += 20 * DEG2RAD;
+                        recoveryDirection = 1;
+                    } else {
+                        robotAngleRadians -= 20 * DEG2RAD;
+                        recoveryDirection = -1;
+                    }
+                    recovering = true;
+                } else {
+                    if (recoveryDirection == 1){
+                        robotAngleRadians += 20 * DEG2RAD;
+                    } else if (recoveryDirection == -1) {
+                        robotAngleRadians -= 20 * DEG2RAD;
+                    }
+            }
+                break;
+            }
+        }
+
+        if (collidedThisFrame == false) {
+                recovering = false;
+                recoveryDirection = 0;
+            }
+
+        
+        
+        // Nose position logic
+        Vector2 nosePosition = {findEndpoint(robotPosition.x, cosf(robotAngleRadians), 25), findEndpoint(robotPosition.y, sinf(robotAngleRadians), 25)};
+        
 
         // 3. Drawing
         BeginDrawing();
         ClearBackground(WHITE);
 
         // Robot
-        DrawCircle(robotPosition.x, robotPosition.y, 20, pink);
+        DrawCircle(robotPosition.x, robotPosition.y, robotRadius, pink);
         DrawCircle(nosePosition.x, nosePosition.y, 5, darkPink);
 
         // Sensors
