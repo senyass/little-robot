@@ -18,7 +18,7 @@ void checkSensorCollision(Vector2 sensorStart, Vector2 sensorEnd, Vector2 bounda
     }
 }
 
-void checkRectangleWallCollision(std::vector<Rectangle> &walls, Vector2 sensorStart, Vector2 sensorEnd, float &closestDistance, Vector2 &closestCollisionPoint){
+void checkRectangleWallCollision(const std::vector<Rectangle> &walls, Vector2 sensorStart, Vector2 sensorEnd, float &closestDistance, Vector2 &closestCollisionPoint){
     for (int j = 0; j < walls.size(); j++) {
         Vector2 topLeft     = {walls[j].x, walls[j].y };
         Vector2 topRight    = {walls[j].x + walls[j].width, walls[j].y};
@@ -162,7 +162,12 @@ int main() {
              DrawRectangleRec(walls[i], GRAY);
         }
    
-
+        // Sensor Readings
+        for (int i = 0; i < sensorDistances.size(); i++) {
+            const char* sensorInfo = TextFormat("Sensor %d : %.1f", i, sensorDistances[i]);
+            int posY = 20 + 25 * i;
+            DrawText(sensorInfo, 20, posY, 20, BLACK);
+        }
 
         EndDrawing();
     }
