@@ -18,6 +18,47 @@ void checkSensorCollision(Vector2 sensorStart, Vector2 sensorEnd, Vector2 bounda
     }
 }
 
+void checkRectangleWallCollision(std::vector<Rectangle> &walls, Vector2 sensorStart, Vector2 sensorEnd, float &closestDistance, Vector2 &closestCollisionPoint){
+    for (int j = 0; j < walls.size(); j++) {
+        Vector2 topLeft     = {walls[j].x, walls[j].y };
+        Vector2 topRight    = {walls[j].x + walls[j].width, walls[j].y};
+        Vector2 bottomLeft  = {walls[j].x, walls[j].y + walls[j].height};
+        Vector2 bottomRight = {walls[j].x + walls[j].width , walls[j].y + walls[j].height};
+        
+        // Check top border
+        checkSensorCollision(sensorStart, sensorEnd, topLeft, topRight, closestDistance, closestCollisionPoint);
+        
+        // Check bottom border
+        checkSensorCollision(sensorStart, sensorEnd, bottomLeft, bottomRight, closestDistance, closestCollisionPoint);
+        
+        // Check right border
+        checkSensorCollision(sensorStart, sensorEnd, topRight, bottomRight, closestDistance, closestCollisionPoint);
+
+        // Check left border
+        checkSensorCollision(sensorStart, sensorEnd, topLeft, bottomLeft, closestDistance, closestCollisionPoint);      
+    }
+
+}
+
+void checkWindowCollision(Vector2 sensorStart, Vector2 sensorEnd, float &closestDistance, Vector2 &closestCollisionPoint, int width, int height){
+    Vector2 windowTopLeft = {0, 0};
+    Vector2 windowTopRight = {width, 0};
+    Vector2 windowBottomLeft = {0, height};
+    Vector2 windowBottomRight = {width, height};
+
+    // Check top edge
+    checkSensorCollision(sensorStart, sensorEnd, windowTopLeft, windowTopRight, closestDistance, closestCollisionPoint);
+    
+    // Check bottom edge
+    checkSensorCollision(sensorStart, sensorEnd, windowBottomLeft, windowBottomRight, closestDistance, closestCollisionPoint);
+    
+    // Check right edge
+    checkSensorCollision(sensorStart, sensorEnd, windowTopRight, windowBottomRight, closestDistance, closestCollisionPoint);
+    
+    // Check left edge
+    checkSensorCollision(sensorStart, sensorEnd, windowTopLeft, windowBottomLeft, closestDistance, closestCollisionPoint);
+}
+
 int main() {
     Color pink = {255, 204, 240, 255};
     Color darkPink = {255, 102, 178, 255};
@@ -27,6 +68,7 @@ int main() {
     float sensorRange = 250.0f;
     int screenWidth = 800;
     int screenHeight = 800;
+    std::vector<int> sensorAngleOffsets = {-60, -30, 0, 30, 60};
 
     std::vector<Rectangle> walls = {
         {50, 50, 100, 500},
@@ -74,50 +116,29 @@ int main() {
         Vector2 nosePosition = {findEndpoint(robotPosition.x, cosf(robotAngleRadians), 25), findEndpoint(robotPosition.y, sinf(robotAngleRadians), 25)};
         
         // Sensor direction and endpoint logic
-        Vector2 sensorDirection = { cosf(robotAngleRadians), sinf(robotAngleRadians) };
-        Vector2 sensorEnd = { findEndpoint(robotPosition.x, sensorDirection.x, sensorRange), findEndpoint(robotPosition.y, sensorDirection.y, sensorRange) };
-    
-        float closestDistance = sensorRange;
-        Vector2 closestCollisionPoint = sensorEnd;
+        std::vector<float> sensorDistances;
+        std::vector<Vector2> sensorHitPoints;
+        for (int i = 0; i < sensorAngleOffsets.size(); i++) {
+            float sensorAngleRadians = robotAngleRadians + sensorAngleOffsets[i] * DEG2RAD;
+            Vector2 sensorDirection = {cosf(sensorAngleRadians), sinf(sensorAngleRadians)};
+            Vector2 sensorEnd = { findEndpoint(robotPosition.x, sensorDirection.x, sensorRange), findEndpoint(robotPosition.y, sensorDirection.y, sensorRange) };
+            float closestDistance = sensorRange;
+            Vector2 closestCollisionPoint = sensorEnd;
+            
 
-        // Sensor collison with walls
-        for (int i = 0; i < walls.size(); i++) {
-            Vector2 topLeft     = {walls[i].x, walls[i].y };
-            Vector2 topRight    = {walls[i].x + walls[i].width, walls[i].y};
-            Vector2 bottomLeft  = {walls[i].x, walls[i].y + walls[i].height};
-            Vector2 bottomRight = {walls[i].x + walls[i].width , walls[i].y + walls[i].height};
-            
-            // Check top border
-            checkSensorCollision(robotPosition, sensorEnd, topLeft, topRight, closestDistance, closestCollisionPoint);
-            
-            // Check bottom border
-            checkSensorCollision(robotPosition, sensorEnd, bottomLeft, bottomRight, closestDistance, closestCollisionPoint);
-            
-            // Check right border
-            checkSensorCollision(robotPosition, sensorEnd, topRight, bottomRight, closestDistance, closestCollisionPoint);
+            // Sensor collison with walls
+            checkRectangleWallCollision(walls, robotPosition, sensorEnd, closestDistance, closestCollisionPoint);
 
-            // Check left border
-            checkSensorCollision(robotPosition, sensorEnd, topLeft, bottomLeft, closestDistance, closestCollisionPoint);      
+
+            // Sensor collison with window edges
+            checkWindowCollision(robotPosition, sensorEnd, closestDistance, closestCollisionPoint, screenWidth, screenHeight);
+
+            sensorDistances.push_back(closestDistance);
+            sensorHitPoints.push_back(closestCollisionPoint);
+
+
         }
-
-        // Sensor collison with window edges
-        Vector2 windowTopLeft = {0, 0};
-        Vector2 windowTopRight = {screenWidth, 0};
-        Vector2 windowBottomLeft = {0, screenHeight};
-        Vector2 windowBottomRight = {screenWidth, screenHeight};
-       
-        // Check top edge
-        checkSensorCollision(robotPosition, sensorEnd, windowTopLeft, windowTopRight, closestDistance, closestCollisionPoint);
-        
-        // Check bottom edge
-        checkSensorCollision(robotPosition, sensorEnd, windowBottomLeft, windowBottomRight, closestDistance, closestCollisionPoint);
-        
-        // Check right edge
-        checkSensorCollision(robotPosition, sensorEnd, windowTopRight, windowBottomRight, closestDistance, closestCollisionPoint);
-        
-        // Check left edge
-        checkSensorCollision(robotPosition, sensorEnd, windowTopLeft, windowBottomLeft, closestDistance, closestCollisionPoint);
-
+    
 
         // 3. Drawing
         BeginDrawing();
@@ -127,17 +148,20 @@ int main() {
         DrawCircle(robotPosition.x, robotPosition.y, 20, pink);
         DrawCircle(nosePosition.x, nosePosition.y, 5, darkPink);
 
-        // Sensor
-        DrawLineV(robotPosition, closestCollisionPoint, RED);
+        // Sensors
+        for (int i = 0; i < sensorHitPoints.size(); i++){
+            DrawLineV(robotPosition, sensorHitPoints[i], RED);
+
+            if (sensorDistances[i] < sensorRange) {
+            DrawCircle(sensorHitPoints[i].x, sensorHitPoints[i].y, 5, RED);
+        }
+        }
 
         // Walls
         for (int i = 0; i < walls.size(); i++) {
              DrawRectangleRec(walls[i], GRAY);
         }
-       
-        if (closestDistance < sensorRange) {
-            DrawCircle(closestCollisionPoint.x, closestCollisionPoint.y, 5, RED);
-        }
+   
 
 
         EndDrawing();
