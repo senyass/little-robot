@@ -8,5 +8,6 @@ A small 2D robot I'm creating with C++ and raylib as a way to get familiar with 
 
 ### Current Goals
 
-- Create the robot! (Project/environment setup)
-- Allow the robot to move manually
+- ~~Create the robot! (Project/environment setup)~~
+- ~~Allow the robot to move manually~~
+- Configure robot to perceive its environment (nearby obstacles using simulated sensors)
