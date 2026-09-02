@@ -23,6 +23,7 @@ A small 2D robot I'm creating with C++ and raylib as a way to get familiar with 
 - ~~Improve code quality by refactoring into classes and separate files~~
 - ~~Improve autonomous steering by combining target navigation and obstacle avoidance~~
 - ~~Fix sensor behavior at window boundaries~~
+- Make Little Robot real cute
 
 
 
