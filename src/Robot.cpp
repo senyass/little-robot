@@ -13,9 +13,9 @@ Robot::Robot(Color robotColor, Color noseColor, float robotRadius, float noseRad
     this->robotPosition = robotPosition;
     robotAngleRadians = robotAngleDegrees * DEG2RAD;
     robotSpeed = 300.0f;
-    sensorRange = 180.0f;
+    sensorRange = 100.0f;
     sensorAngleOffsets = {-90, -60, -30, 0, 30, 60, 90};
-    avoidanceDistance = 60.0f;
+    avoidanceDistance = 40.0f;
     maxTurnSpeed = 360.0f;
     recovering = false;
     recoveryDirection = 0;
@@ -191,9 +191,10 @@ void Robot::updateSensors(const std::vector<Rectangle>& walls, int screenWidth, 
 
 // ==================== Steering ====================
 
-float Robot::avoidObstacles(float deltaTime) {
+float Robot::avoidObstacles(float deltaTime, float &avoidanceStrength) {
     float closestSensorDistance = sensorRange;
     int dangerSensor = 3;
+    avoidanceStrength = 0.0f;
 
     for (int i = 2; i < 5; i++)
     {
@@ -207,17 +208,31 @@ float Robot::avoidObstacles(float deltaTime) {
     float leftAverage = getLeftAverage();
     float rightAverage = getRightAverage();
 
-    // Reset side once the front is clear
-    if (sensorDistances[2] > avoidanceDistance &&
-        sensorDistances[3] > avoidanceDistance &&
-        sensorDistances[4] > avoidanceDistance)
+
+
+    float clearDistance = avoidanceDistance + 20.0f;
+
+if (avoidanceSide == 1)
+{
+    if (sensorDistances[3] > clearDistance &&
+        sensorDistances[2] > clearDistance)
     {
         avoidanceSide = 0;
     }
+}
+else if (avoidanceSide == -1)
+{
+    if (sensorDistances[3] > clearDistance &&
+        sensorDistances[4] > clearDistance)
+    {
+        avoidanceSide = 0;
+    }
+}
 
     if (closestSensorDistance <= avoidanceDistance && recovering == false) {
-        float steeringStrength = (avoidanceDistance - closestSensorDistance) / avoidanceDistance;
-        float actualTurnSpeed = steeringStrength * maxTurnSpeed;
+        avoidanceStrength = (avoidanceDistance - closestSensorDistance) / avoidanceDistance;
+        float actualTurnSpeed = avoidanceStrength * maxTurnSpeed;
+        
 
         if (avoidanceSide == 0) {
             if (dangerSensor < 3)

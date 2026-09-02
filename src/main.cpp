@@ -30,15 +30,17 @@ int main()
 
         littleRobot.updateSensors(gameWorld.walls, gameWorld.screenWidth,  gameWorld.screenHeight);
 
-        float avoidanceTurn = littleRobot.avoidObstacles(deltaTime);
+        float avoidanceStrength = 0.0f;
+        float avoidanceTurn = littleRobot.avoidObstacles(deltaTime, avoidanceStrength);
         float targetTurn = 0;
 
         if (targetSet && !littleRobot.recovering)
         {
             targetTurn = littleRobot.steerTowardTarget(targetPosition, deltaTime);
         }
+        float targetWeight = 1.0f - (0.2f * avoidanceStrength);
 
-        float finalTurn = targetTurn + avoidanceTurn;
+        float finalTurn = targetTurn*targetWeight + avoidanceTurn;
 
         if (targetSet)
         {       

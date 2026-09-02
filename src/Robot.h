@@ -18,7 +18,7 @@ public:
     bool recovering;
     int recoveryDirection;
     int avoidanceSide; 
-    
+
     float sensorRange; 
     std::vector<int> sensorAngleOffsets;
     std::vector<float> sensorDistances;
@@ -54,7 +54,7 @@ public:
 
     // ==================== Steering ====================
 
-    float avoidObstacles(float deltaTime);
+    float avoidObstacles(float deltaTime, float &avoidanceStrength);
 
     float steerTowardTarget(Vector2 targetPosition, float deltaTime);
 
