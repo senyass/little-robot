@@ -15,4 +15,11 @@ A small 2D robot I'm creating with C++ and raylib as a way to get familiar with 
 - ~~Display sensor distance readings for debugging~~
 - ~~Configure the robot to navigate autonomously using sensor readings~~
 - Add a target for the robot to navigate toward
+    - ~~Allow user to place a target~~
+    - Calculate the direction from the robot to the target
+    - Steer the robot toward the target
+    - Navigate toward the target while avoiding obstacles
+    - Detect when the robot reaches the target
+
+
 
