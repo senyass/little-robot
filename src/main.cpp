@@ -30,16 +30,19 @@ int main()
 
         littleRobot.updateSensors(gameWorld.walls, gameWorld.screenWidth,  gameWorld.screenHeight);
 
-        littleRobot.avoidObstacles(deltaTime);
+        float avoidanceTurn = littleRobot.avoidObstacles(deltaTime);
+        float targetTurn = 0;
 
         if (targetSet && !littleRobot.recovering)
         {
-            littleRobot.steerTowardTarget(targetPosition, deltaTime);
+            targetTurn = littleRobot.steerTowardTarget(targetPosition, deltaTime);
         }
+
+        float finalTurn = targetTurn + avoidanceTurn;
 
         if (targetSet)
         {       
-            littleRobot.move(deltaTime, gameWorld.screenWidth, gameWorld.screenHeight, gameWorld.walls);
+            littleRobot.move(deltaTime, gameWorld.screenWidth, gameWorld.screenHeight, gameWorld.walls, finalTurn);
         }
 
         

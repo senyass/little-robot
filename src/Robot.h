@@ -51,14 +51,14 @@ public:
 
     // ==================== Steering ====================
 
-    void avoidObstacles(float deltaTime);
+    float avoidObstacles(float deltaTime);
 
-    void steerTowardTarget(Vector2 targetPosition, float deltaTime);
+    float steerTowardTarget(Vector2 targetPosition, float deltaTime);
 
 
     // ==================== Movement & Collision ====================
 
-    void move(float deltaTime, float screenWidth, float screenHeight, const std::vector<Rectangle> &walls);
+    void move(float deltaTime, float screenWidth, float screenHeight, const std::vector<Rectangle> &walls, float finalTurnAngle);
 
     void collisionHandling(const std::vector<Rectangle> &walls, Vector2 oldPosition);
 

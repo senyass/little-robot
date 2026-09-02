@@ -169,7 +169,7 @@ void Robot::updateSensors(const std::vector<Rectangle>& walls, int screenWidth, 
 
 // ==================== Steering ====================
 
-void Robot::avoidObstacles(float deltaTime) {
+float Robot::avoidObstacles(float deltaTime) {
     float closestSensorDistance = sensorRange;
     int dangerSensor = 3;
 
@@ -191,28 +191,29 @@ void Robot::avoidObstacles(float deltaTime) {
 
         if (dangerSensor < 3)
         {
-            robotAngleRadians += actualTurnSpeed * deltaTime * DEG2RAD;
+            return actualTurnSpeed * deltaTime * DEG2RAD;
         }
         else if (dangerSensor > 3)
         {
-            robotAngleRadians -= actualTurnSpeed * deltaTime * DEG2RAD;
+            return -(actualTurnSpeed * deltaTime * DEG2RAD);
         }
         else
         {
             if (leftAverage <= rightAverage)
             {
-                robotAngleRadians += actualTurnSpeed * deltaTime * DEG2RAD;
+               return actualTurnSpeed * deltaTime * DEG2RAD;
             }
             else
             {
-                robotAngleRadians -= actualTurnSpeed * deltaTime * DEG2RAD;
+                return -(actualTurnSpeed * deltaTime * DEG2RAD);
             }
         }
     }
+    return 0;
 }
 
 
-void Robot::steerTowardTarget(Vector2 targetPosition, float deltaTime){
+float Robot::steerTowardTarget(Vector2 targetPosition, float deltaTime){
 
     Vector2 targetDirection = targetPosition - robotPosition;
     float targetAngleRadians = atan2f(targetDirection.y, targetDirection.x);
@@ -229,16 +230,16 @@ void Robot::steerTowardTarget(Vector2 targetPosition, float deltaTime){
 
     float turnThisFrame = maxTurnSpeed * deltaTime * DEG2RAD;
     float actualTargetTurn = Clamp(angleDifference, -turnThisFrame, turnThisFrame);
-    robotAngleRadians += actualTargetTurn;
+    return actualTargetTurn;
 }
 
 
 
 // ==================== Movement & Collision ====================
 
-void Robot::move(float deltaTime, float screenWidth, float screenHeight, const std::vector<Rectangle> &walls){
+void Robot::move(float deltaTime, float screenWidth, float screenHeight, const std::vector<Rectangle> &walls, float finalTurnAngle){
     Vector2 robotOldPosition = robotPosition;
-
+    robotAngleRadians += finalTurnAngle;
     Vector2 robotDirection = {cosf(robotAngleRadians), sinf(robotAngleRadians)};
     robotPosition.x += robotDirection.x * robotSpeed * deltaTime;
     robotPosition.y += robotDirection.y * robotSpeed * deltaTime;
