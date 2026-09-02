@@ -74,7 +74,7 @@ int main()
     float robotRadius = 20.0f;
     float robotSpeed = 300.0f;
     float robotAngleRadians = 0.0f;
-    float sensorRange = 250.0f;
+    float sensorRange = 180.0f;
     int screenWidth = 800;
     int screenHeight = 800;
     std::vector<int> sensorAngleOffsets = {-90, -60, -30, 0, 30, 60, 90};
@@ -84,23 +84,25 @@ int main()
         {587, 29, 70, 200},
         {300, 710, 300, 80}};
 
-    float avoidanceDistance = 150.0f;
+    float avoidanceDistance = 60.0f;
     float maxTurnSpeed = 360.0f;
     bool recovering = false;
     int recoveryDirection = 0;
 
-    Vector2 targetPosition = {-1, -1};
+    Vector2 targetPosition = {-10, -10};
     float targetRadius = 10.0f;
     bool targetSet = false;
+    Vector2 targetDirection = {-10, -10};
+    float targetAngleRadians = 0.0f;
+    float angleDifference = 0.0f;
 
     InitWindow(screenWidth, screenHeight, "Little Robot");
     SetTargetFPS(180);
 
-    
-
     // Game Loop
     while (!WindowShouldClose())
     {
+
         oldRobotPosition = robotPosition;
         Vector2 robotDirection = {0, 0};
         float deltaTime = GetFrameTime();
@@ -168,13 +170,32 @@ int main()
                     robotAngleRadians -= actualTurnSpeed * deltaTime * DEG2RAD;
                 }
             }
+        } else if (targetSet && !recovering) {
+            targetDirection = targetPosition - robotPosition;
+            targetAngleRadians = atan2f(targetDirection.y, targetDirection.x);
+            angleDifference = targetAngleRadians - robotAngleRadians;
+
+            if (angleDifference < -PI)
+            {
+                angleDifference += 2 * PI;
+            }
+            else if (angleDifference > PI)
+            {
+                angleDifference -= 2 * PI;
+            }
+
+            float turnThisFrame = maxTurnSpeed * deltaTime * DEG2RAD;
+            float actualTargetTurn = Clamp(angleDifference, -turnThisFrame, turnThisFrame);
+            robotAngleRadians += actualTargetTurn;
         }
 
         robotDirection.x = cosf(robotAngleRadians);
         robotDirection.y = sinf(robotAngleRadians);
 
-        robotPosition.x += robotDirection.x * robotSpeed * deltaTime;
-        robotPosition.y += robotDirection.y * robotSpeed * deltaTime;
+        if (targetSet) {
+            robotPosition.x += robotDirection.x * robotSpeed * deltaTime;
+            robotPosition.y += robotDirection.y * robotSpeed * deltaTime;
+        }
 
         // Avoid falling off the map
         robotPosition.x = Clamp(robotPosition.x, robotRadius, screenWidth - robotRadius);
@@ -229,23 +250,34 @@ int main()
         // Nose position logic
         Vector2 nosePosition = {findEndpoint(robotPosition.x, cosf(robotAngleRadians), 25), findEndpoint(robotPosition.y, sinf(robotAngleRadians), 25)};
 
-
         // Target logic
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !targetSet) {
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !targetSet)
+        {
             bool invalidTarget = false;
             targetPosition = GetMousePosition();
-            for (int i = 0; i < walls.size(); i++){
+            for (int i = 0; i < walls.size(); i++)
+            {
                 bool collision = CheckCollisionCircleRec(targetPosition, targetRadius, walls[i]);
-                if (collision == true) {
+                if (collision == true)
+                {
                     invalidTarget = true;
                     targetPosition = {-10, -10};
                     break;
                 }
             }
-            if (!invalidTarget) {
+            if (!invalidTarget)
+            {
                 targetSet = true;
             }
         }
+
+    
+        // Found target logic
+        float distanceToTarget = Vector2Distance(robotPosition, targetPosition);
+
+       if  (distanceToTarget <= robotRadius + targetRadius  && targetSet == true) {
+            targetSet = false;
+       }
 
         // 3. Drawing
         BeginDrawing();
@@ -281,7 +313,10 @@ int main()
         }
 
         // Target
-        DrawCircle(targetPosition.x, targetPosition.y, targetRadius, BLUE);
+        if (targetSet == true) {
+            DrawCircle(targetPosition.x, targetPosition.y, targetRadius, BLUE);
+            DrawLineV(robotPosition, targetDirection + robotPosition, BLUE);
+        }
 
         EndDrawing();
     }
