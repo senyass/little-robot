@@ -2,7 +2,7 @@
 #include <raymath.h>
 #include <vector>
 #include "Robot.h"
-
+#include "World.h"
 
 
 
@@ -10,20 +10,14 @@ int main()
 {
     Color pink = {255, 204, 240, 255};
     Color darkPink = {255, 102, 178, 255};
-    int screenWidth = 800;
-    int screenHeight = 800;
-
-    std::vector<Rectangle> walls = {
-        {50, 50, 100, 500},
-        {587, 29, 70, 200},
-        {300, 710, 300, 80}};
+ 
 
     Vector2 targetPosition = {-10, -10};
     float targetRadius = 10.0f;
     bool targetSet = false;
  
-
-    InitWindow(screenWidth, screenHeight, "Little Robot");
+    World gameWorld = World(800, 800, GRAY);
+    InitWindow(gameWorld.screenWidth, gameWorld.screenHeight, "Little Robot");
     SetTargetFPS(180);
     Robot littleRobot = Robot(pink, darkPink, 20.0f, 5.0f, {400,400}, 0.0f);
 
@@ -34,10 +28,7 @@ int main()
 
         // 1. Event Handling + 2. Update State
 
-        // Calculate robot/sensor geometry
-        // Sensor direction and endpoint logic
-
-        littleRobot.updateSensors(walls, screenWidth, screenHeight);
+        littleRobot.updateSensors(gameWorld.walls, gameWorld.screenWidth,  gameWorld.screenHeight);
 
         littleRobot.avoidObstacles(deltaTime);
 
@@ -48,7 +39,7 @@ int main()
 
         if (targetSet)
         {       
-            littleRobot.move(deltaTime, screenWidth, screenHeight, walls);
+            littleRobot.move(deltaTime, gameWorld.screenWidth, gameWorld.screenHeight, gameWorld.walls);
         }
 
         
@@ -57,9 +48,9 @@ int main()
         {
             bool invalidTarget = false;
             targetPosition = GetMousePosition();
-            for (int i = 0; i < walls.size(); i++)
+            for (int i = 0; i <  gameWorld.walls.size(); i++)
             {
-                bool collision = CheckCollisionCircleRec(targetPosition, targetRadius, walls[i]);
+                bool collision = CheckCollisionCircleRec(targetPosition, targetRadius,  gameWorld.walls[i]);
                 if (collision == true)
                 {
                     invalidTarget = true;
@@ -92,10 +83,7 @@ int main()
         littleRobot.drawSensors();
 
         // Walls
-        for (int i = 0; i < walls.size(); i++)
-        {
-            DrawRectangleRec(walls[i], GRAY);
-        }
+        gameWorld.draw();
 
         // Sensor Readings
         littleRobot.readSensors();
