@@ -20,7 +20,7 @@ A small 2D robot I'm creating with C++ and raylib as a way to get familiar with 
     - ~~Steer the robot toward the target~~
     - ~~Navigate toward the target while avoiding obstacles~~
     - ~~Detect when the robot reaches the target~~
-- Improve code quality by refactoring into classes and separate files
+- ~~Improve code quality by refactoring into classes and separate files~~
 - Improve autonomous steering by combining target navigation and obstacle avoidance
 
 
