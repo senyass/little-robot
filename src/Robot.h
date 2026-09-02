@@ -14,13 +14,16 @@ public:
     float robotAngleRadians; 
     float avoidanceDistance;
     float maxTurnSpeed;
+
     bool recovering;
     int recoveryDirection;
-
+    int avoidanceSide; 
+    
     float sensorRange; 
     std::vector<int> sensorAngleOffsets;
     std::vector<float> sensorDistances;
     std::vector<Vector2> sensorHitPoints;
+    
 
 
     // ==================== Constructor ====================

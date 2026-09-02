@@ -19,6 +19,7 @@ Robot::Robot(Color robotColor, Color noseColor, float robotRadius, float noseRad
     maxTurnSpeed = 360.0f;
     recovering = false;
     recoveryDirection = 0;
+    avoidanceSide = 0;
 }
 
 
@@ -47,12 +48,24 @@ void Robot::drawSensors() {
 
 
 void Robot::readSensors(){
-    for (int i = 0; i < sensorDistances.size(); i++)
+    int smallest = 0;
+    float dist = 180.0f;
+    for (int i = 2; i < 5; i++)
     {
         const char *sensorInfo = TextFormat("Sensor %d : %.1f", i, sensorDistances[i]);
         int posY = 20 + 25 * i;
         DrawText(sensorInfo, 20, posY, 20, BLACK);
+
+        if (sensorDistances[i] < dist){
+            dist = sensorDistances[i];
+            smallest = i;
+        }
+        
+
     }
+    const char *danger = TextFormat("Danger Sensor: %d ", smallest);
+        DrawText(danger, 20, 195, 20, RED);
+
 }
 
 
@@ -106,24 +119,33 @@ void checkRectangleWallCollision(const std::vector<Rectangle> &walls, Vector2 se
 }
 
 
-void checkWindowCollision(Vector2 sensorStart, Vector2 sensorEnd, float &closestDistance, Vector2 &closestCollisionPoint, int width, int height, float robotRadius)
-{
-    Vector2 windowTopLeft = {robotRadius, robotRadius};
-    Vector2 windowTopRight = {width - robotRadius, robotRadius};
-    Vector2 windowBottomLeft = {robotRadius, height - robotRadius};
-    Vector2 windowBottomRight = {width - robotRadius, height - robotRadius};
+void checkWindowCollision(Vector2 sensorStart, Vector2 sensorEnd, float &closestDistance, Vector2 &closestCollisionPoint, int width, int height, float robotRadius){
+    Vector2 windowTopLeft = {0, 0};
+    Vector2 windowTopRight = {width, 0};
+    Vector2 windowBottomLeft = {0, height};
+    Vector2 windowBottomRight = {width, height};
+
+    Vector2 sensorDirection = sensorEnd - sensorStart;
 
     // Check top edge
-    checkSensorCollision(sensorStart, sensorEnd, windowTopLeft, windowTopRight, closestDistance, closestCollisionPoint);
+    if (sensorDirection.y < 0){
+        checkSensorCollision(sensorStart, sensorEnd, windowTopLeft, windowTopRight, closestDistance, closestCollisionPoint);
+    }
 
     // Check bottom edge
-    checkSensorCollision(sensorStart, sensorEnd, windowBottomLeft, windowBottomRight, closestDistance, closestCollisionPoint);
+    if (sensorDirection.y > 0){
+        checkSensorCollision(sensorStart, sensorEnd, windowBottomLeft, windowBottomRight, closestDistance, closestCollisionPoint);
+    }
 
     // Check right edge
-    checkSensorCollision(sensorStart, sensorEnd, windowTopRight, windowBottomRight, closestDistance, closestCollisionPoint);
+    if (sensorDirection.x > 0){
+        checkSensorCollision(sensorStart, sensorEnd, windowTopRight, windowBottomRight, closestDistance, closestCollisionPoint);
+    }
 
     // Check left edge
-    checkSensorCollision(sensorStart, sensorEnd, windowTopLeft, windowBottomLeft, closestDistance, closestCollisionPoint);
+    if (sensorDirection.x < 0){
+        checkSensorCollision(sensorStart, sensorEnd, windowTopLeft, windowBottomLeft, closestDistance, closestCollisionPoint);
+    }
 }
 
 
@@ -185,33 +207,50 @@ float Robot::avoidObstacles(float deltaTime) {
     float leftAverage = getLeftAverage();
     float rightAverage = getRightAverage();
 
+    // Reset side once the front is clear
+    if (sensorDistances[2] > avoidanceDistance &&
+        sensorDistances[3] > avoidanceDistance &&
+        sensorDistances[4] > avoidanceDistance)
+    {
+        avoidanceSide = 0;
+    }
+
     if (closestSensorDistance <= avoidanceDistance && recovering == false) {
         float steeringStrength = (avoidanceDistance - closestSensorDistance) / avoidanceDistance;
         float actualTurnSpeed = steeringStrength * maxTurnSpeed;
 
-        if (dangerSensor < 3)
-        {
-            return actualTurnSpeed * deltaTime * DEG2RAD;
-        }
-        else if (dangerSensor > 3)
-        {
-            return -(actualTurnSpeed * deltaTime * DEG2RAD);
-        }
-        else
-        {
-            if (leftAverage <= rightAverage)
+        if (avoidanceSide == 0) {
+            if (dangerSensor < 3)
+            {   
+                avoidanceSide = 1;
+            }
+            else if (dangerSensor > 3)
             {
-               return actualTurnSpeed * deltaTime * DEG2RAD;
+                avoidanceSide = -1;
             }
             else
             {
-                return -(actualTurnSpeed * deltaTime * DEG2RAD);
+                if (leftAverage <= rightAverage)
+                {
+                    avoidanceSide = 1;
+                }
+                else
+                {
+                    avoidanceSide = -1;
+                }
             }
         }
+
+        if (avoidanceSide == 1) {
+            return actualTurnSpeed * deltaTime * DEG2RAD;
+        }
+        else {
+            return -(actualTurnSpeed * deltaTime * DEG2RAD);
+        }
     }
+
     return 0;
 }
-
 
 float Robot::steerTowardTarget(Vector2 targetPosition, float deltaTime){
 
